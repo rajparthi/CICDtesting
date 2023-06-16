@@ -35,7 +35,7 @@ pipeline {
                 stage('approval') {
                     when {
                         not {
-                             equals expected: true, actual: params.autoaprrove
+                             equals expected: true, actual: params.autoapprove
                            }
                         }
                         
