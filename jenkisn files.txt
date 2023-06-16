@@ -1,0 +1,57 @@
+pipeline {
+
+     parameters {
+         booleanparam(name: 'autoApprove' , defaultvalue: false, description: 'automatically run apply after generating plan?')
+      }
+
+
+     environment {
+       AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+       AWS_SECRET_KEY_ID     = credentials('AWS_SECRET_KEY_ID')
+     
+     }
+  
+     agent any
+      stages {
+          stage('checkout') {
+               steps {
+                     script{
+                            dir("terraform")
+                            {
+                             git "https://github.com/rajparthi/golive_loan.git"
+                            }
+                         }
+                      }
+                    }
+
+            
+           stages('plan') {
+                steps {	
+                     sh 'pwd;cd terraform/ ; terraform init'
+                     sh 'pwd;cd terraform/ ; terraform plan -out tfplan'
+                     sh 'pwd;cd terraform/ ; terraform show -no-color tfplan > tfplan.txt'
+                   }
+                }
+                stage('approval') {
+                    when {
+                        not {
+                             equals expected: true, actual: params.autoaprrove
+                           }
+                        }
+                        
+                steps {
+                    script {
+                          def plan = readfile 'terraform/tfplan.txt'
+                          input message = "do you want to apply?",
+                          parameters: [text(name: 'plan',description: 'please review the plan' defaultvalue:plan)]
+                       }
+                    }
+                  }
+               
+                stage('apply') {
+                      steps {
+                            sh "pwd;cd terraform/ ; terraform apply -input=false tfplan"
+                          }
+                        }
+                     }  
+                  }        
